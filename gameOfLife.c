@@ -1,7 +1,7 @@
 #include "raylib.h"
 #include<stdio.h>
 #include<stdlib.h>
-#include <time.h>
+#include <string.h>
 
 const int fps=30;
 const int screenWidth=800;
@@ -29,41 +29,8 @@ int neighbours(int i, int j,int board[][cols]){
 	return n;
 }
 
-int main(){
-	int board[rows][cols];
-	int next_board[rows][cols];
-	memset( board, 0,rows*cols*sizeof(int) );
-	memset( next_board, 0,rows*cols*sizeof(int) );
-	srand(time(NULL));
-
-	
+void render(int board[][cols]){
 	for(int i=0;i<rows;i++){
-				for(int j=0;j<cols;j++){
-					if(random()%10<8){
-						board[i][j]=true;
-					}
-				}
-	}
-	// board[1][2]=true;
-	// board[2][3]=true;
-	// board[3][1]=true;
-	// board[3][2]=true;
-	// board[3][3]=true;
-
-	// board[rows/2][5]=true;
-	// board[rows/2][6]=true;
-	// board[rows/2][7]=true;
-	// board[rows/2][8]=true;
-
-	InitWindow(screenWidth,screenHeight,"Game Of Life");
-	SetTargetFPS(fps);  
-
-	while(!WindowShouldClose()){
-	
-		BeginDrawing();
-            		ClearBackground(BLACK);
-			//render
-			for(int i=0;i<rows;i++){
 				for(int j=0;j<cols;j++){
 					if(board[i][j])
 						DrawRectangleV((Vector2){startPos.x+j*cellSize.x,
@@ -72,9 +39,9 @@ int main(){
 									RAYWHITE);
 				}
 			}
-
-			// //compute next state
-			for(int i=0;i<rows;i++){
+}
+void compute_next_state(int board[][cols],int next_board[][cols]){
+	for(int i=0;i<rows;i++){
 				for(int j=0;j<cols;j++){
 					int n=neighbours(i,j,board);
 					if(board[i][j]){
@@ -84,18 +51,37 @@ int main(){
 					}
 				}
 			}
+}
 
-			// //update current state
-			for(int i=0;i<rows;i++){
-				for(int j=0;j<cols;j++){
-					board[i][j]=next_board[i][j];
+void randomInitState(__uint8_t percentage,int board[][cols]){
+	if (percentage>100) percentage=100;
+	for(int i=0;i<rows;i++){
+			for(int j=0;j<cols;j++){
+				if(random()%100<percentage){
+					board[i][j]=true;
 				}
 			}
+}
+}
+int main(){
+	int board[rows][cols];
+	int next_board[rows][cols];
+	memset( board, 0,rows*cols*sizeof(int) );
+	memset( next_board, 0,rows*cols*sizeof(int) );
 
+	randomInitState(10,board);
 
-            		
+	InitWindow(screenWidth,screenHeight,"Game Of Life");
+	SetTargetFPS(fps);  
+
+	while(!WindowShouldClose()){
+	
+		BeginDrawing();
+        	ClearBackground(BLACK);	
+			render(board);
+			compute_next_state(board,next_board);
+			memcpy(board,next_board,rows*cols*sizeof(int));
 		EndDrawing();
 	}
-
 	CloseWindow();
 }
