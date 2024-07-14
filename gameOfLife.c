@@ -2,11 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <omp.h>
 
-const int fps = 30;
+const int fps = 24;
 const int screenWidth = 800;
 const int screenHeight = 450;
-const int cellSize = 8;
+const int cellSize = 5;
 const int cols = screenWidth / cellSize;
 const int rows = screenHeight / cellSize;
 const Vector2 startPos = {screenWidth * .5 - (cols * cellSize) * 0.5,
@@ -46,9 +47,9 @@ void render(int **board)
 		}
 	}
 }
-void compute_next_state(int **board, int **next_board)
+void compute_next_state(int start, int step, int **board, int **next_board)
 {
-	for (int i = 0; i < rows; i++)
+	for (int i = start; i < rows; i = i + step)
 	{
 		for (int j = 0; j < cols; j++)
 		{
@@ -65,9 +66,9 @@ void compute_next_state(int **board, int **next_board)
 	}
 }
 
-void push_next_state(int **board, int **next_board)
+void push_next_state(int start, int step,int **board, int **next_board)
 {
-	for (int i = 0; i < rows; i++)
+	for (int i = start; i < rows; i = i + step)
 	{
 		for (int j = 0; j < cols; j++)
 		{
@@ -78,13 +79,14 @@ void push_next_state(int **board, int **next_board)
 
 void randomInitState(__uint8_t percentage, int **board)
 {
+	srand(time(NULL));
 	if (percentage > 100)
 		percentage = 100;
 	for (int i = 0; i < rows; i++)
 	{
 		for (int j = 0; j < cols; j++)
 		{
-			if (random() % 100 < percentage)
+			if (rand() % 100 < percentage)
 			{
 				board[i][j] = true;
 			}
@@ -93,6 +95,8 @@ void randomInitState(__uint8_t percentage, int **board)
 }
 int main()
 {
+	SetConfigFlags(FLAG_VSYNC_HINT) ;
+
 	int **board = malloc(rows * sizeof(int *));
 	int **next_board = malloc(rows * sizeof(int *));
 	for (int i = 0; i < rows; i++)
@@ -100,14 +104,12 @@ int main()
 		board[i] = (int *)calloc(cols, sizeof(int));
 		next_board[i] = (int *)calloc(cols, sizeof(int));
 	}
-	// int board[rows][cols];
-	// int next_board[rows][cols];
-	// memset(board, 0, rows * cols * sizeof(int));
-	// memset(next_board, 0, rows * cols * sizeof(int));
 
 	randomInitState(10, board);
 
-	InitWindow(screenWidth, screenHeight, "Game Of Life");
+    // glider(board);
+
+    InitWindow(screenWidth, screenHeight, "Game Of Life");
 	SetTargetFPS(fps);
 
 	while (!WindowShouldClose())
@@ -116,8 +118,14 @@ int main()
 		BeginDrawing();
 		ClearBackground(BLACK);
 		render(board);
-		compute_next_state(board, next_board);
-		push_next_state(board, next_board);
+		#pragma omp parallel
+		{
+			int id = omp_get_thread_num();
+			int thrds = omp_get_num_threads();
+			compute_next_state(id, thrds, board, next_board);
+			#pragma omp barrier
+			push_next_state(id, thrds, board, next_board);
+		}
 		EndDrawing();
 	}
 
@@ -127,4 +135,13 @@ int main()
 		free(next_board[i]);
 	}
 	CloseWindow();
+}
+
+void glider(int **board)
+{
+    board[0][1] = 1;
+    board[1][2] = 1;
+    board[2][0] = 1;
+    board[2][1] = 1;
+    board[2][2] = 1;
 }
