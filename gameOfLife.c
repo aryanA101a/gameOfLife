@@ -2,16 +2,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <unistd.h>
 #include <omp.h>
 
-const int fps = 24;
+#define FPS 24;
+#define CELLSIZE 5;
+#define PROBABILITY 10;
 const int screenWidth = 800;
 const int screenHeight = 450;
-const int cellSize = 5;
-const int cols = screenWidth / cellSize;
-const int rows = screenHeight / cellSize;
-const Vector2 startPos = {screenWidth * .5 - (cols * cellSize) * 0.5,
-						  screenHeight * .5 - (rows * cellSize) * 0.5};
+int cols, rows;
+int cellSize;
+Vector2 startPos = {0, 0};
+
+void print_usage()
+{
+	printf("Usage: myprogram -c <cell_size> -p <probability> -f <fps>\n");
+    printf("  -c <cell_size>    : Cell size (1-10)\n");
+    printf("  -p <probability>  : Probability (1-100)\n");
+    printf("  -f <fps>          : Frames per second (1-300)\n");
+}
 
 int mod(int x, int y)
 {
@@ -66,7 +76,7 @@ void compute_next_state(int start, int step, int **board, int **next_board)
 	}
 }
 
-void push_next_state(int start, int step,int **board, int **next_board)
+void push_next_state(int start, int step, int **board, int **next_board)
 {
 	for (int i = start; i < rows; i = i + step)
 	{
@@ -93,9 +103,43 @@ void randomInitState(__uint8_t percentage, int **board)
 		}
 	}
 }
-int main()
+int main(int argc, char *argv[])
 {
-	SetConfigFlags(FLAG_VSYNC_HINT) ;
+	int opt;
+	int cellSizeArg, probabilityArg, fpsArg;
+	cellSizeArg = 0;
+	probabilityArg = 0;
+	fpsArg = 0;
+
+	while ((opt = getopt(argc, argv, "c:p:f:")) != -1)
+	{
+		switch (opt)
+		{
+		case 'c':
+			cellSizeArg = atoi(optarg);
+			break;
+		case 'p':
+			probabilityArg = atoi(optarg);
+			break;
+		case 'f':
+			fpsArg = atoi(optarg);
+			break;
+		default:
+			print_usage();
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	cellSize = (cellSizeArg > 0 && cellSizeArg <= 10) ? cellSizeArg : CELLSIZE;
+	int probablility = (probabilityArg > 0 && probabilityArg <= 100) ? probabilityArg : PROBABILITY;
+	int fps = (fpsArg > 0 && fpsArg <= 300) ? fpsArg : FPS;
+
+	cols = screenWidth / cellSize;
+	rows = screenHeight / cellSize;
+	startPos.x = screenWidth * .5 - (cols * cellSize) * 0.5;
+	startPos.y = screenHeight * .5 - (rows * cellSize) * 0.5;
+
+	SetConfigFlags(FLAG_VSYNC_HINT);
 
 	int **board = malloc(rows * sizeof(int *));
 	int **next_board = malloc(rows * sizeof(int *));
@@ -105,11 +149,11 @@ int main()
 		next_board[i] = (int *)calloc(cols, sizeof(int));
 	}
 
-	randomInitState(10, board);
+	randomInitState(probablility, board);
 
-    // glider(board);
+	// glider(board);
 
-    InitWindow(screenWidth, screenHeight, "Game Of Life");
+	InitWindow(screenWidth, screenHeight, "Game Of Life");
 	SetTargetFPS(fps);
 
 	while (!WindowShouldClose())
@@ -139,9 +183,9 @@ int main()
 
 void glider(int **board)
 {
-    board[0][1] = 1;
-    board[1][2] = 1;
-    board[2][0] = 1;
-    board[2][1] = 1;
-    board[2][2] = 1;
+	board[0][1] = 1;
+	board[1][2] = 1;
+	board[2][0] = 1;
+	board[2][1] = 1;
+	board[2][2] = 1;
 }
